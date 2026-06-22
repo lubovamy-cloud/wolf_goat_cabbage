@@ -4,221 +4,311 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вовк, Коза та Капуста — Логічна гра</title>
-    
-    <!-- Підключення React, Babel та Tailwind через офіційні CDN -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+    <!-- Швидке підключення стилів Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap');
+        body { 
+            font-family: 'Comfortaa', cursive, sans-serif; 
+        }
+        .boat-transition {
+            transition: left 0.8s ease-in-out, transform 0.8s ease-in-out;
+        }
     </style>
 </head>
-<body class="bg-sky-50">
-    <div id="root"></div>
+<body class="bg-sky-100 min-h-screen p-4 md:p-8 flex flex-col items-center select-none">
 
-    <script type="text/babel">
-        const { useState } = React;
+    <!-- Заголовок та статус гри -->
+    <header className="max-w-4xl w-full text-center mb-6">
+        <h1 class="text-3xl md:text-5xl font-bold text-sky-800 mb-4 drop-shadow-sm">
+            Вовк, Коза та Капуста 🌾
+        </h1>
+        <div class="bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-md border border-sky-200 inline-block max-w-xl">
+            <p id="game-message" class="text-base md:text-lg text-sky-900 font-bold flex items-center justify-center gap-2">
+                <!-- Сюди завантажуватиметься статус гри -->
+                Завантаження гри...
+            </p>
+        </div>
+    </header>
 
-        const INITIAL_STATE = {
+    <!-- Ігрове поле -->
+    <main class="relative w-full max-w-4xl aspect-[16/9] bg-emerald-200 rounded-[2rem] shadow-2xl overflow-hidden border-8 border-white">
+        
+        <!-- Річка (по центру) -->
+        <div class="absolute inset-y-0 left-1/4 right-1/4 bg-sky-400 relative overflow-hidden shadow-inner">
+            <!-- Хвилі повітряні -->
+            <div class="absolute inset-0 opacity-10 flex flex-col justify-around pointer-events-none">
+                <div class="h-2 bg-white w-full rounded animate-pulse"></div>
+                <div class="h-2 bg-white w-2/3 rounded animate-pulse" style="animation-delay: 0.5s"></div>
+                <div class="h-2 bg-white w-3/4 rounded animate-pulse" style="animation-delay: 1s"></div>
+            </div>
+        </div>
+
+        <!-- Береги декоративні -->
+        <div class="absolute inset-y-0 left-0 w-1/4 bg-emerald-500/20 border-r-4 border-emerald-600/10 pointer-events-none"></div>
+        <div class="absolute inset-y-0 right-0 w-1/4 bg-emerald-500/20 border-l-4 border-emerald-600/10 pointer-events-none"></div>
+
+        <!-- Написи берегів -->
+        <div class="absolute top-4 left-4 text-emerald-800/60 font-bold text-xs uppercase tracking-wider pointer-events-none">Лівий берег</div>
+        <div class="absolute top-4 right-4 text-emerald-800/60 font-bold text-xs uppercase tracking-wider pointer-events-none">Правий берег</div>
+
+        <!-- Предмети на лівому березі -->
+        <div id="left-bank-items" class="absolute left-0 top-12 bottom-12 w-1/4 flex flex-col justify-center items-center gap-4 p-2 z-10">
+            <!-- Кнопки генеруються через JS -->
+        </div>
+
+        <!-- Предмети на правому березі -->
+        <div id="right-bank-items" class="absolute right-0 top-12 bottom-12 w-1/4 flex flex-col justify-center items-center gap-4 p-2 z-10">
+            <!-- Кнопки генеруються через JS -->
+        </div>
+
+        <!-- Човен та селянин -->
+        <div id="boat-container" class="absolute top-1/2 -translate-y-1/2 left-[25%] boat-transition flex flex-col items-center z-20 cursor-pointer">
+            <div id="boat-element" class="relative w-28 h-14 md:w-36 md:h-18 bg-amber-800 rounded-b-full shadow-lg border-t-4 border-amber-950 flex items-end justify-center pb-2 gap-2 hover:brightness-110 transition-all">
+                <!-- Селянин -->
+                <div class="text-3xl md:text-4xl mb-3 drop-shadow">👨‍🌾</div>
+                <!-- Пасажир в човні -->
+                <div id="boat-passenger" class="text-3xl md:text-4xl mb-3 drop-shadow hover:scale-110 active:scale-90 transition-transform"></div>
+                
+                <!-- Табличка ПЛИВТИ -->
+                <div id="swim-badge" class="absolute -top-8 bg-amber-500 text-white font-bold text-[9px] md:text-[11px] px-3 py-1 rounded-full border-2 border-white shadow animate-bounce">
+                    ПЛИВТИ!
+                </div>
+            </div>
+        </div>
+
+        <!-- Спливаюче вікно фіналу (Won/Lost) -->
+        <div id="overlay" class="absolute inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div class="bg-white rounded-3xl p-6 md:p-8 shadow-2xl text-center max-w-sm w-full border-4 border-sky-200">
+                <div id="overlay-icon" class="text-6xl mb-4"></div>
+                <h2 id="overlay-title" class="text-2xl md:text-3xl font-bold mb-3"></h2>
+                <p id="overlay-desc" class="text-slate-600 mb-6 text-sm md:text-base"></p>
+                <button onclick="resetGame()" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 4H21M4 4h5"></path></svg>
+                    Грати знову
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Інструкція / Правила під полем -->
+    <footer class="mt-8 max-w-4xl w-full grid grid-cols-1 md:grid-cols-3 gap-4 text-xs md:text-sm">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-sky-200">
+            <p class="text-slate-700"><strong>🚣 Човен:</strong> Селянин може взяти з собою лише одного пасажира (вовк, коза або капуста) за один раз.</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-sky-200">
+            <p class="text-slate-700"><strong>🐺 🐐 Вовк і Коза:</strong> Не можна залишати їх самих на березі без нагляду селянина — вовк з’їсть козу!</p>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-sky-200">
+            <p class="text-slate-700"><strong>🐐 🥬 Коза і Капуста:</strong> Не можна залишати козу наодинці з капустою — коза її з’їсть!</p>
+        </div>
+    </footer>
+
+    <!-- Додаткова кнопка підказки -->
+    <div class="mt-6 text-center">
+        <button onclick="showHint()" class="text-sky-600 hover:text-sky-800 font-bold text-xs md:text-sm underline underline-offset-4">
+            Потрібна підказка?💡
+        </button>
+    </div>
+
+    <!-- Логіка гри на чистому JS -->
+    <script>
+        const ITEM_EMOJIS = {
+            wolf: '🐺',
+            goat: '🐐',
+            cabbage: '🥬'
+        };
+
+        const STATE = {
             farmer: 'left',
             leftBank: ['wolf', 'goat', 'cabbage'],
             rightBank: [],
             boat: null,
             status: 'playing',
-            message: 'Допоможи селянину перевезти всіх на інший берег!',
+            message: 'Допоможи селянину перевезти всіх на інший берег! 👨‍🌾',
+            isMoving: false
         };
 
-        const ITEM_EMOJIS = { wolf: '🐺', goat: '🐐', cabbage: '🥬' };
+        function checkGameOver() {
+            const currentSide = STATE.farmer;
+            const otherSide = currentSide === 'left' ? 'right' : 'left';
+            const endangeredBank = otherSide === 'left' ? STATE.leftBank : STATE.rightBank;
 
-        function App() {
-            const [game, setGame] = useState(INITIAL_STATE);
-            const [isMoving, setIsMoving] = useState(false);
+            // Вовк + Коза
+            if (endangeredBank.includes('wolf') && endangeredBank.includes('goat')) {
+                return { status: 'lost', title: 'Ой, біда! 🐺🍴🐐', message: 'Ви залишили вовка з козою наодинці, і вовк з’їв козу!' };
+            }
+            // Коза + Капуста
+            if (endangeredBank.includes('goat') && endangeredBank.includes('cabbage')) {
+                return { status: 'lost', title: 'Ой, лихо! 🐐🍴🥬', message: 'Ви залишили козу з капустою, і коза з’їла капусту!' };
+            }
+            // Перемога
+            if (STATE.rightBank.length === 3) {
+                return { status: 'won', title: 'УРА! ПЕРЕМОГА! 🎉', message: 'Ви майстер логіки! Всі пасажири цілі та успішно перевезені на інший берег!' };
+            }
 
-            const checkGameOver = (state) => {
-                const otherSide = state.farmer === 'left' ? 'right' : 'left';
-                const otherBank = otherSide === 'left' ? state.leftBank : state.rightBank;
-
-                if (otherBank.includes('wolf') && otherBank.includes('goat')) {
-                    return { status: 'lost', message: 'Ой! Вовк з’їв козу! 🐺🍴🐐' };
-                }
-                if (otherBank.includes('goat') && otherBank.includes('cabbage')) {
-                    return { status: 'lost', message: 'Ой! Коза з’їла капусту! 🐐🍴🥬' };
-                }
-                if (state.rightBank.length === 3) {
-                    return { status: 'won', message: 'Вітаємо! Всі успішно переправлені! 🎉' };
-                }
-                return { status: 'playing', message: state.message };
-            };
-
-            const resetGame = () => {
-                setGame(INITIAL_STATE);
-                setIsMoving(false);
-            };
-
-            const moveBoat = () => {
-                if (game.status !== 'playing' || isMoving) return;
-                setIsMoving(true);
-                
-                setTimeout(() => {
-                    setGame(prev => {
-                        const newSide = prev.farmer === 'left' ? 'right' : 'left';
-                        const updatedLeft = [...prev.leftBank];
-                        const updatedRight = [...prev.rightBank];
-                        
-                        if (prev.boat) {
-                            if (newSide === 'left') updatedLeft.push(prev.boat);
-                            else updatedRight.push(prev.boat);
-                        }
-
-                        const stateAfterMove = {
-                            ...prev,
-                            farmer: newSide,
-                            leftBank: updatedLeft,
-                            rightBank: updatedRight,
-                            boat: null,
-                        };
-
-                        const result = checkGameOver(stateAfterMove);
-                        setIsMoving(false);
-                        return { ...stateAfterMove, status: result.status, message: result.message };
-                    });
-                }, 800);
-            };
-
-            const toggleItemInBoat = (item, currentSide) => {
-                if (game.status !== 'playing' || isMoving || game.farmer !== currentSide) return;
-
-                setGame(prev => {
-                    if (prev.boat === item) {
-                        const newBank = currentSide === 'left' ? [...prev.leftBank, item] : [...prev.rightBank, item];
-                        return {
-                            ...prev,
-                            boat: null,
-                            leftBank: currentSide === 'left' ? newBank : prev.leftBank,
-                            rightBank: currentSide === 'right' ? newBank : prev.rightBank,
-                        };
-                    } else if (!prev.boat) {
-                        const newBank = currentSide === 'left' 
-                            ? prev.leftBank.filter(i => i !== item) 
-                            : prev.rightBank.filter(i => i !== item);
-                        return {
-                            ...prev,
-                            boat: item,
-                            leftBank: currentSide === 'left' ? newBank : prev.leftBank,
-                            rightBank: currentSide === 'right' ? newBank : prev.rightBank,
-                        };
-                    }
-                    return prev;
-                });
-            };
-
-            return (
-                <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
-                    <header className="max-w-4xl w-full text-center mb-8">
-                        <h1 className="text-4xl font-bold text-sky-800 mb-4">Вовк, Коза та Капуста</h1>
-                        <div className="bg-white p-4 rounded-2xl shadow-sm border border-sky-100 inline-block">
-                            <p className="text-lg text-sky-900 flex items-center gap-2">
-                                {/* Надійна вбудована іконка INFO через SVG */}
-                                <svg className="w-5 h-5 text-sky-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {game.message}
-                            </p>
-                        </div>
-                    </header>
-
-                    <main className="relative w-full max-w-4xl aspect-[16/9] bg-emerald-100 rounded-[2rem] shadow-2xl overflow-hidden border-8 border-white">
-                        {/* Річка */}
-                        <div className="absolute inset-x-0 top-0 bottom-0 flex justify-center">
-                            <div className="w-1/2 h-full bg-sky-400 relative overflow-hidden">
-                                <div className="absolute inset-0 opacity-20 flex items-center justify-center">
-                                    <svg className="w-full h-full text-white" viewBox="0 0 100 100" preserveAspectRatio="none">
-                                        <path d="M0,50 Q25,30 50,50 T100,50 L100,100 L0,100 Z" fill="currentColor" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Береги */}
-                        <div className="absolute inset-0 flex justify-between pointer-events-none">
-                            <div className="w-1/4 h-full bg-emerald-500/20 border-r-4 border-emerald-600/10" />
-                            <div className="w-1/4 h-full bg-emerald-500/20 border-l-4 border-emerald-600/10" />
-                        </div>
-
-                        {/* Предмети на лівому березі */}
-                        <div className="absolute left-0 top-0 bottom-0 w-1/4 p-4 flex flex-wrap justify-center items-center gap-2">
-                            {game.leftBank.map(item => (
-                                <button key={item} onClick={() => toggleItemInBoat(item, 'left')} 
-                                    className={`w-14 h-14 md:w-16 md:h-16 bg-white rounded-xl shadow flex items-center justify-center text-3xl md:text-4xl border-2 transition-all
-                                    ${game.farmer === 'left' && !game.boat ? 'border-emerald-400 hover:scale-110 active:scale-95' : 'opacity-40 cursor-not-allowed'}`}>
-                                    {ITEM_EMOJIS[item]}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Предмети на правому березі */}
-                        <div className="absolute right-0 top-0 bottom-0 w-1/4 p-4 flex flex-wrap justify-center items-center gap-2">
-                            {game.rightBank.map(item => (
-                                <button key={item} onClick={() => toggleItemInBoat(item, 'right')} 
-                                    className={`w-14 h-14 md:w-16 md:h-16 bg-white rounded-xl shadow flex items-center justify-center text-3xl md:text-4xl border-2 transition-all
-                                    ${game.farmer === 'right' && !game.boat ? 'border-emerald-400 hover:scale-110 active:scale-95' : 'opacity-40 cursor-not-allowed'}`}>
-                                    {ITEM_EMOJIS[item]}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Човен та селянин */}
-                        <div className="absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-in-out flex flex-col items-center"
-                             style={{ left: game.farmer === 'left' ? '25%' : '75%', transform: `translate(${game.farmer === 'left' ? '0' : '-100%'}, -50%)` }}>
-                            <div onClick={moveBoat} className="relative w-28 h-14 md:w-32 md:h-16 bg-orange-800 rounded-b-full shadow-xl border-t-4 border-orange-900 flex items-end justify-center pb-2 gap-2 cursor-pointer hover:brightness-110">
-                                <div className="text-3xl md:text-4xl mb-4">👨‍🌾</div>
-                                {game.boat && (
-                                    <div className="text-3xl md:text-4xl mb-4" onClick={(e) => { e.stopPropagation(); toggleItemInBoat(game.boat, game.farmer); }}>
-                                        {ITEM_EMOJIS[game.boat]}
-                                    </div>
-                                )}
-                                {!isMoving && game.status === 'playing' && (
-                                    <div className="absolute -top-10 bg-white px-2 py-1 rounded-full text-[10px] font-bold text-orange-800 shadow animate-bounce">ПЛИВТИ!</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Екран завершення */}
-                        {game.status !== 'playing' && (
-                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                                <div className="bg-white rounded-3xl p-8 shadow-2xl text-center max-w-sm border-4 border-sky-100">
-                                    <h2 className={`text-3xl font-bold mb-4 ${game.status === 'won' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                        {game.status === 'won' ? 'Перемога!' : 'Поразка'}
-                                    </h2>
-                                    <p className="text-slate-600 mb-6">{game.message}</p>
-                                    <button onClick={resetGame} className="w-full py-3 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-700 transition-colors flex items-center justify-center gap-2">
-                                        RETRY
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </main>
-
-                    <footer className="mt-8 max-w-4xl w-full grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-700">
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-sky-100">
-                            <p><strong>1. Човен:</strong> Вміщує селянина та один об'єкт.</p>
-                        </div>
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-sky-100">
-                            <p><strong>2. Вовк і Коза:</strong> Не залишайте їх самих без нагляду!</p>
-                        </div>
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-sky-100">
-                            <p><strong>3. Коза і Капуста:</strong> Не залишайте їх разом!</p>
-                        </div>
-                    </footer>
-                </div>
-            );
+            return { status: 'playing', title: '', message: 'Продовжуйте! Пливіть далі.' };
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        function render() {
+            const leftContainer = document.getElementById('left-bank-items');
+            const rightContainer = document.getElementById('right-bank-items');
+            const boatContainer = document.getElementById('boat-container');
+            const boatPassenger = document.getElementById('boat-passenger');
+            const gameMessage = document.getElementById('game-message');
+            const swimBadge = document.getElementById('swim-badge');
+
+            // Очищення берегів
+            leftContainer.innerHTML = '';
+            rightContainer.innerHTML = '';
+
+            // Рендер лівого берега
+            STATE.leftBank.forEach(item => {
+                const button = document.createElement('button');
+                button.className = `w-14 h-14 md:w-16 md:h-16 bg-white rounded-2xl shadow-md border-2 text-3xl flex items-center justify-center transition-all ${STATE.farmer === 'left' && !STATE.boat ? 'border-emerald-400 hover:scale-110 active:scale-95' : 'border-transparent opacity-60 cursor-not-allowed'}`;
+                button.textContent = ITEM_EMOJIS[item];
+                button.onclick = () => toggleItem(item, 'left');
+                leftContainer.appendChild(button);
+            });
+
+            // Рендер правого берега
+            STATE.rightBank.forEach(item => {
+                const button = document.createElement('button');
+                button.className = `w-14 h-14 md:w-16 md:h-16 bg-white rounded-2xl shadow-md border-2 text-3xl flex items-center justify-center transition-all ${STATE.farmer === 'right' && !STATE.boat ? 'border-emerald-400 hover:scale-110 active:scale-95' : 'border-transparent opacity-60 cursor-not-allowed'}`;
+                button.textContent = ITEM_EMOJIS[item];
+                button.onclick = () => toggleItem(item, 'right');
+                rightContainer.appendChild(button);
+            });
+
+            // Рендер човна
+            if (STATE.farmer === 'left') {
+                boatContainer.style.left = '25%';
+                boatContainer.style.transform = 'translate(0%, -50%)';
+            } else {
+                boatContainer.style.left = '75%';
+                boatContainer.style.transform = 'translate(-100%, -50%)';
+            }
+
+            // Пасажир у човні
+            if (STATE.boat) {
+                boatPassenger.textContent = ITEM_EMOJIS[STATE.boat];
+                boatPassenger.className = "text-3xl md:text-4xl mb-3 drop-shadow cursor-pointer hover:brightness-125";
+                boatPassenger.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleItem(STATE.boat, STATE.farmer);
+                };
+            } else {
+                boatPassenger.textContent = '';
+                boatPassenger.onclick = null;
+            }
+
+            // Оновлення повідомлення
+            gameMessage.innerHTML = `<span class="text-sky-500">ℹ️</span> ${STATE.message}`;
+
+            // Показ плашки пливти
+            if (STATE.isMoving) {
+                swimBadge.classList.add('hidden');
+            } else {
+                swimBadge.classList.remove('hidden');
+            }
+        }
+
+        function toggleItem(item, side) {
+            if (STATE.status !== 'playing' || STATE.isMoving || STATE.farmer !== side) return;
+
+            if (STATE.boat === item) {
+                // Висаджуємо пасажира
+                STATE.boat = null;
+                if (side === 'left') {
+                    STATE.leftBank.push(item);
+                } else {
+                    STATE.rightBank.push(item);
+                }
+            } else if (!STATE.boat) {
+                // Саджаємо пасажира
+                if (side === 'left' && STATE.leftBank.includes(item)) {
+                    STATE.leftBank = STATE.leftBank.filter(i => i !== item);
+                    STATE.boat = item;
+                } else if (side === 'right' && STATE.rightBank.includes(item)) {
+                    STATE.rightBank = STATE.rightBank.filter(i => i !== item);
+                    STATE.boat = item;
+                }
+            }
+            render();
+        }
+
+        // Обробник натискання на човен (пливти)
+        document.getElementById('boat-element').onclick = function() {
+            if (STATE.status !== 'playing' || STATE.isMoving) return;
+
+            STATE.isMoving = true;
+            STATE.message = "Човен пливе на інший берег... 🚣💨";
+            render();
+
+            setTimeout(() => {
+                // Зміна берега
+                STATE.farmer = STATE.farmer === 'left' ? 'right' : 'left';
+                
+                // Якщо у човні був пасажир — переносимо його у масив берега автоматично
+                if (STATE.boat) {
+                    const item = STATE.boat;
+                    STATE.boat = null;
+                    if (STATE.farmer === 'left') {
+                        STATE.leftBank.push(item);
+                    } else {
+                        STATE.rightBank.push(item);
+                    }
+                }
+
+                STATE.isMoving = false;
+                
+                // Перевірка фіналу
+                const gameOverResult = checkGameOver();
+                if (gameOverResult.status !== 'playing') {
+                    STATE.status = gameOverResult.status;
+                    showOverlay(gameOverResult);
+                } else {
+                    STATE.message = "Селянин переплив! Кого перевеземо наступним?";
+                }
+                render();
+            }, 800);
+        };
+
+        function showOverlay(result) {
+            const overlay = document.getElementById('overlay');
+            const icon = document.getElementById('overlay-icon');
+            const title = document.getElementById('overlay-title');
+            const desc = document.getElementById('overlay-desc');
+
+            icon.textContent = result.status === 'won' ? '🎉🏆🌟' : '👾❌🥀';
+            title.textContent = result.title;
+            title.className = `text-2xl md:text-3xl font-bold mb-3 ${result.status === 'won' ? 'text-emerald-600' : 'text-rose-600'}`;
+            desc.textContent = result.message;
+
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+        }
+
+        function resetGame() {
+            STATE.farmer = 'left';
+            STATE.leftBank = ['wolf', 'goat', 'cabbage'];
+            STATE.rightBank = [];
+            STATE.boat = null;
+            STATE.status = 'playing';
+            STATE.message = 'Допоможи селянину перевезти всіх на інший берег! 👨‍🌾';
+            STATE.isMoving = false;
+
+            document.getElementById('overlay').classList.add('hidden');
+            document.getElementById('overlay').classList.remove('flex');
+            render();
+        }
+
+        function showHint() {
+            alert("💡 Алгоритм вирішення:\n1. Спочатку перевези Козу (вовк та капуста залишаться).\n2. Повернись сам.\n3. Перевези Капусту на правий берег.\n4. Перевези Козу назад на лівий берег.\n5. Залиш Козу і перевези Вовка до Капусти.\n6. Повернись сам.\n7. Перевези Козу.");
+        }
+
+        // Старт гри
+        resetGame();
     </script>
 </body>
 </html>
